@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>陈硕 · 健康管理</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&display=swap"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Serif SC', serif; }
+  body { background: #f9f8f6; color: #1a1a1a; min-height: 100vh; }
+  input, textarea, button { font-family: 'Noto Serif SC', serif; outline: none; }
+  button { cursor: pointer; }
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f2ef;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.2);
+    --text-primary: #1a1a1a;
+    --text-secondary: #666;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #0F6E56;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --blue-light: #E6F1FB;
+    --blue: #185FA5;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1c1e; color: #f0f0f0; }
+    :root {
+      --bg-primary: #2c2c2e;
+      --bg-secondary: #3a3a3c;
+      --border: rgba(255,255,255,0.12);
+      --border-md: rgba(255,255,255,0.22);
+      --text-primary: #f0f0f0;
+      --text-secondary: #aaa;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TABS = ["今日","Garmin同步","运动计划","营养方案","睡眠","数据分析","AI顾问"];
+
+const EXERCISE_PLAN = [
+  { day:"周一", type:"有氧+核心", items:["慢跑30分钟（心率140-155）","平板支撑 3×45秒","卷腹 3×20"], focus:"燃脂·护肝" },
+  { day:"周二", type:"力量训练", items:["哑铃深蹲 4×12","俯卧撑 4×15","哑铃划船 4×12","弹力带肩推 3×15"], focus:"增肌·代谢" },
+  { day:"周三", type:"颈椎+柔韧", items:["颈椎米字操 10分钟","瑜伽拉伸 20分钟","泡沫轴放松 15分钟"], focus:"颈椎修复" },
+  { day:"周四", type:"有氧+HIIT", items:["热身 5分钟","HIIT：20秒冲刺/40秒慢走×10组","拉伸 10分钟"], focus:"燃脂·心肺" },
+  { day:"周五", type:"力量训练", items:["硬拉 4×10","哑铃弯举 4×12","三头下压 4×12","农夫行走 3组"], focus:"增肌·代谢" },
+  { day:"周六", type:"跳绳+核心", items:["跳绳 20分钟（间歇）","悬挂举腿 3×15","俄罗斯转体 3×20","死虫式 3×10"], focus:"肾结石排石" },
+  { day:"周日", type:"主动恢复", items:["散步 40分钟","泡脚+拉伸","冥想 10分钟"], focus:"恢复·睡眠" },
+];
+
+const NUTRITION = {
+  breakfast:[
+    {name:"燕麦粥",detail:"50g燕麦+核桃5颗+蓝莓适量",reason:"护肝降脂"},
+    {name:"水煮蛋",detail:"2个，不加盐",reason:"优质蛋白"},
+    {name:"柠檬水",detail:"500ml，餐前",reason:"助排石"},
+  ],
+  lunch:[
+    {name:"杂粮饭",detail:"糙米+藜麦各半，100g干重",reason:"低GI控血糖"},
+    {name:"清蒸鱼",detail:"鲈鱼/鳕鱼 150g，少盐",reason:"低脂高蛋白"},
+    {name:"绿叶蔬菜",detail:"西兰花/生菜 200g，焯水",reason:"镁元素防结石"},
+    {name:"番茄汤",detail:"番茄2个煮汤，无盐",reason:"柠檬酸抑结石"},
+  ],
+  dinner:[
+    {name:"蒸红薯/山药",detail:"150g，替代主食",reason:"低卡高纤护肝"},
+    {name:"豆腐鸡胸",detail:"豆腐100g+鸡胸 80g，清炒",reason:"低脂蛋白助眠"},
+    {name:"黄瓜/西芹",detail:"生食或白灼",reason:"利尿助排石"},
+    {name:"小米粥",detail:"50g，睡前可加",reason:"促色氨酸吸收"},
+  ],
+  supplements:[
+    {name:"维生素D3",dose:"2000IU",timing:"早餐后",reason:"逆龄·免疫·骨骼"},
+    {name:"鱼油 Omega-3",dose:"1g×2粒",timing:"午餐后",reason:"护肝·降脂·抗炎"},
+    {name:"柠檬酸镁",dose:"200mg",timing:"晚餐后",reason:"预防肾结石·助眠"},
+    {name:"CoQ10辅酶",dose:"100mg",timing:"早餐后",reason:"细胞能量·逆龄"},
+    {name:"NMN",dose:"250mg",timing:"空腹晨起",reason:"NAD+前体·逆龄核心"},
+    {name:"益生菌",dose:"1粒",timing:"空腹早晨",reason:"肠道健康·护肝"},
+    {name:"褪黑素（低剂量）",dose:"0.5mg",timing:"睡前30分钟",reason:"改善睡眠连续性"},
+  ]
+};
+
+const SLEEP_TIPS = [
+  {time:"21:00",action:"调暗灯光，停用手机屏幕"},
+  {time:"21:30",action:"泡脚15分钟（40℃），促进血液回流"},
+  {time:"22:00",action:"冥想/腹式呼吸10分钟（4-7-8呼吸法）"},
+  {time:"22:30",action:"目标入睡"},
+  {time:"03:00",action:"若醒来：不看时间，腹式呼吸，避免焦虑"},
+  {time:"06:00",action:"起床后立即日光浴5分钟，重置生物钟"},
+];
+
+const save = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+const load = (k,d) => { try { const v = localStorage.getItem(k); if(v) return JSON.parse(v); } catch(e){} return d; };
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+const s = (style) => style;
+
+function Card({children, style={}}) {
+  return <div style={{border:`0.5px solid var(--border)`, borderRadius:12, padding:16, ...style}}>{children}</div>;
+}
+
+function Tag({children, color="green"}) {
+  const colors = {
+    green:{bg:"var(--green-light)",color:"var(--green-dark)"},
+    amber:{bg:"var(--amber-light)",color:"#633806"},
+    blue:{bg:"var(--blue-light)",color:"var(--blue)"},
+    red:{bg:"#FCEBEB",color:"var(--red)"},
+  };
+  const c = colors[color]||colors.green;
+  return <span style={{fontSize:11,padding:"3px 8px",borderRadius:4,background:c.bg,color:c.color,whiteSpace:"nowrap",flexShrink:0}}>{children}</span>;
+}
+
+function MetricCard({label,value,color}) {
+  return (
+    <div style={{background:"var(--bg-secondary)",borderRadius:8,padding:"12px 14px"}}>
+      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:4}}>{label}</div>
+      <div style={{fontSize:20,fontWeight:500,color:color||"var(--text-primary)"}}>{value}</div>
+    </div>
+  );
+}
+
+function TodayTab() {
+  const dk = todayKey();
+  const [log, setLog] = useState(() => load("log_"+dk, {weight:"",water:0,sleep:6.5,exercise:false,breakfast:false,lunch:false,dinner:false,supps:false,mood:3}));
+
+  const upd = (k,v) => {
+    const n = {...log,[k]:v};
+    setLog(n); save("log_"+dk, n);
+    const h = load("history",[]);
+    const i = h.findIndex(x=>x.date===dk);
+    if(i>=0) h[i]={date:dk,...n}; else h.push({date:dk,...n});
+    save("history", h.slice(-90));
+  };
+
+  const score = Math.round(
+    (log.water>=8?20:log.water*2.5) +
+    (log.exercise?25:0) +
+    ((log.breakfast&&log.lunch&&log.dinner)?20:(log.breakfast?7:0)+(log.lunch?7:0)+(log.dinner?6:0)) +
+    (log.supps?15:0) +
+    (log.sleep>=7?20:log.sleep>=6?12:5)
+  );
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+        <MetricCard label="今日健康分" value={`${score}/100`} color={score>=80?"var(--green-dark)":score>=60?"var(--amber)":"var(--red)"}/>
+        <MetricCard label="饮水量" value={`${log.water} 杯`}/>
+        <MetricCard label="睡眠记录" value={`${log.sleep} 小时`}/>
+        <MetricCard label="今日运动" value={log.exercise?"已完成":"待完成"} color={log.exercise?"var(--green-dark)":"var(--text-secondary)"}/>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Card>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>体重 (kg)</div>
+          <input type="number" placeholder="今日体重" step="0.1" value={log.weight}
+            onChange={e=>upd("weight",e.target.value)}
+            style={{width:"100%",fontSize:16,padding:"8px 10px",borderRadius:8,border:`0.5px solid var(--border-md)`,background:"var(--bg-secondary)",color:"var(--text-primary)"}}/>
+        </Card>
+        <Card>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>睡眠 (小时)</div>
+          <input type="number" placeholder="时长" step="0.5" min="0" max="12" value={log.sleep}
+            onChange={e=>upd("sleep",parseFloat(e.target.value)||0)}
+            style={{width:"100%",fontSize:16,padding:"8px 10px",borderRadius:8,border:`0.5px solid var(--border-md)`,background:"var(--bg-secondary)",color:"var(--text-primary)"}}/>
+        </Card>
+      </div>
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>饮水追踪（目标 10 杯）</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+          {Array.from({length:10},(_,i)=>(
+            <div key={i} onClick={()=>upd("water",i<log.water?i:i+1)}
+              style={{width:34,height:34,borderRadius:6,border:`0.5px solid var(--border-md)`,background:i<log.water?"var(--green)":"var(--bg-secondary)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,transition:"all 0.15s"}}>
+              {i<log.water?"💧":"○"}
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:12,color:"var(--text-secondary)"}}>已喝 {(log.water*0.25).toFixed(2)}L · 目标 2.5L</div>
+      </Card>
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>今日打卡</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {[["breakfast","早餐"],["lunch","午餐"],["dinner","晚餐"],["exercise","运动"],["supps","保健品"]].map(([k,l])=>(
+            <div key={k} onClick={()=>upd(k,!log[k])}
+              style={{padding:"10px",borderRadius:8,border:log[k]?`1px solid var(--green)`:`0.5px solid var(--border)`,background:log[k]?"var(--green-light)":"var(--bg-secondary)",cursor:"pointer",fontSize:13,fontWeight:500,color:log[k]?"var(--green-dark)":"var(--text-secondary)",textAlign:"center",transition:"all 0.15s"}}>
+              {log[k]?"✓ ":""}{l}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>今日状态</div>
+        <div style={{display:"flex",gap:16}}>
+          {["😞","😕","😐","🙂","😄"].map((m,i)=>(
+            <span key={i} onClick={()=>upd("mood",i+1)}
+              style={{fontSize:28,cursor:"pointer",opacity:log.mood===i+1?1:0.3,transform:log.mood===i+1?"scale(1.25)":"scale(1)",transition:"all 0.15s"}}>
+              {m}
+            </span>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function GarminTab() {
+  const [raw,setRaw]=useState("");
+  const [parsed,setParsed]=useState(()=>load("garmin_latest",null));
+  const [err,setErr]=useState("");
+  const [mode,setMode]=useState(parsed?"view":"import");
+
+  const parse=(text)=>{
+    try{
+      const j=JSON.parse(text.trim());
+      const d={
+        date:j.calendarDate||j.date||todayKey(),
+        restingHR:j.restingHeartRate||j.dailyHeartRate?.restingHeartRate||j.restingHR||null,
+        bodyBattery:j.bodyBatteryMostRecentValue||j.bodyBattery||null,
+        stress:j.averageStressLevel||j.stress||null,
+        steps:j.totalSteps||j.steps||null,
+        calories:j.activeKilocalories||j.calories||null,
+        sleepScore:j.sleepScores?.overall?.value||j.sleepScore||null,
+        deepSleep:j.deepSleep||null,
+        remSleep:j.remSleep||null,
+        hrv:j.hrv||null,
+        spo2:j.averageSpo2||j.spo2||null,
+        vo2max:j.vo2MaxValue||j.vo2max||null,
+        totalSleep:j.sleepTimeSeconds?Math.round(j.sleepTimeSeconds/360)/10:j.totalSleep||null,
+      };
+      save("garmin_latest",d);
+      const dk=d.date; const lg=load("log_"+dk,{});
+      if(d.totalSleep) lg.sleep=d.totalSleep;
+      save("log_"+dk,lg);
+      return d;
+    }catch(e){return null;}
+  };
+
+  const handleImport=()=>{
+    setErr("");
+    if(!raw.trim()){setErr("请粘贴 Garmin JSON 数据");return;}
+    const r=parse(raw);
+    if(!r){setErr("格式无法识别，请检查后重试");return;}
+    setParsed(r);setRaw("");setMode("view");
+  };
+
+  const sample=`{
+  "date": "${todayKey()}",
+  "restingHR": 58,
+  "bodyBattery": 72,
+  "stress": 28,
+  "steps": 8500,
+  "totalSleep": 6.5,
+  "deepSleep": 1.2,
+  "remSleep": 1.8,
+  "hrv": 52,
+  "spo2": 97,
+  "vo2max": 48
+}`;
+
+  const MRow=({label,val,unit,good,warn})=>{
+    if(val===null||val===undefined)return null;
+    const color=good&&val>=good?"var(--green-dark)":warn&&val<=warn?"var(--red)":"var(--text-primary)";
+    return(
+      <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`0.5px solid var(--border)`,alignItems:"center"}}>
+        <span style={{fontSize:14,color:"var(--text-secondary)"}}>{label}</span>
+        <span style={{fontSize:15,fontWeight:500,color}}>{val} <span style={{fontSize:12,fontWeight:400,color:"var(--text-secondary)"}}>{unit}</span></span>
+      </div>
+    );
+  };
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {[["import","导入"],["view","数据"],["guide","指南"]].map(([k,l])=>(
+          <div key={k} onClick={()=>setMode(k)}
+            style={{padding:"7px 16px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,background:mode===k?"var(--green)":"var(--bg-secondary)",color:mode===k?"#fff":"var(--text-secondary)",border:mode===k?"none":`0.5px solid var(--border)`}}>
+            {l}
+          </div>
+        ))}
+      </div>
+
+      {mode==="guide"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <Card style={{background:"var(--green-light)",border:"none"}}>
+            <div style={{fontSize:14,fontWeight:500,color:"var(--green-dark)",marginBottom:12}}>方法 A · 网页导出</div>
+            {["打开 connect.garmin.com 登录","点击「健康统计」→「健康快照」","右上角「···」→「导出」→「JSON」","复制内容粘贴到「导入」页"].map((s,i)=>(
+              <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
+                <div style={{width:22,height:22,borderRadius:"50%",background:"var(--green)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>{i+1}</div>
+                <div style={{fontSize:13,lineHeight:1.6,color:"#085041"}}>{s}</div>
+              </div>
+            ))}
+          </Card>
+          <Card>
+            <div style={{fontSize:14,fontWeight:500,marginBottom:10}}>方法 B · 手动填写格式</div>
+            <pre style={{background:"var(--bg-secondary)",borderRadius:8,padding:"10px 12px",fontSize:12,overflowX:"auto",lineHeight:1.7,color:"var(--text-primary)"}}>{sample}</pre>
+          </Card>
+        </div>
+      )}
+
+      {mode==="import"&&(
+        <div>
+          <textarea value={raw} onChange={e=>setRaw(e.target.value)}
+            placeholder={"粘贴 Garmin JSON 数据...\n\n{\n  \"date\": \"2026-04-06\",\n  \"restingHR\": 58,\n  \"bodyBattery\": 72\n}"}
+            style={{width:"100%",minHeight:200,padding:"12px",borderRadius:10,border:`0.5px solid var(--border-md)`,background:"var(--bg-secondary)",color:"var(--text-primary)",fontSize:13,lineHeight:1.6,resize:"vertical"}}/>
+          {err&&<div style={{color:"var(--red)",fontSize:13,marginTop:8}}>{err}</div>}
+          <button onClick={handleImport}
+            style={{marginTop:12,width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--green)",color:"#fff",fontSize:14,fontWeight:500}}>
+            导入并解析
+          </button>
+        </div>
+      )}
+
+      {mode==="view"&&(
+        <div>
+          {!parsed?(
+            <div style={{textAlign:"center",padding:40,color:"var(--text-secondary)",fontSize:14}}>还没有数据，请先在「导入」页粘贴 Garmin 数据</div>
+          ):(
+            <>
+              <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:12}}>数据日期：{parsed.date}</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:16}}>
+                {[
+                  {label:"Body Battery",val:parsed.bodyBattery,unit:"/100",color:parsed.bodyBattery>=76?"var(--green-dark)":parsed.bodyBattery>=51?"var(--amber)":"var(--red)"},
+                  {label:"HRV",val:parsed.hrv,unit:"ms"},
+                  {label:"静息心率",val:parsed.restingHR,unit:"bpm"},
+                  {label:"压力指数",val:parsed.stress,unit:"/100",color:parsed.stress<25?"var(--green-dark)":parsed.stress<50?"var(--amber)":"var(--red)"},
+                ].filter(m=>m.val!=null).map((m,i)=>(
+                  <MetricCard key={i} label={m.label} value={<>{m.val} <span style={{fontSize:12,fontWeight:400,color:"var(--text-secondary)"}}>{m.unit}</span></>} color={m.color}/>
+                ))}
+              </div>
+              <Card style={{padding:"4px 16px",marginBottom:12}}>
+                <MRow label="睡眠评分" val={parsed.sleepScore} unit="/100" good={75} warn={50}/>
+                <MRow label="总睡眠时长" val={parsed.totalSleep} unit="小时" good={7} warn={6}/>
+                <MRow label="深度睡眠" val={parsed.deepSleep} unit="小时" good={1.5}/>
+                <MRow label="REM 睡眠" val={parsed.remSleep} unit="小时" good={1.5}/>
+                <MRow label="血氧 SpO2" val={parsed.spo2} unit="%" good={95} warn={90}/>
+                <MRow label="步数" val={parsed.steps?.toLocaleString()} unit="步"/>
+                <MRow label="活动卡路里" val={parsed.calories} unit="kcal"/>
+                <MRow label="VO2 Max" val={parsed.vo2max} unit="ml/kg/min"/>
+              </Card>
+              {parsed.bodyBattery!=null&&(
+                <div style={{background:parsed.bodyBattery>=76?"var(--green-light)":parsed.bodyBattery>=51?"var(--amber-light)":"#FCEBEB",borderRadius:8,padding:"12px 16px"}}>
+                  <div style={{fontSize:13,fontWeight:500,color:parsed.bodyBattery>=76?"var(--green-dark)":parsed.bodyBattery>=51?"#633806":"var(--red)",marginBottom:4}}>Body Battery 解读</div>
+                  <div style={{fontSize:12,lineHeight:1.7,color:parsed.bodyBattery>=76?"#085041":parsed.bodyBattery>=51?"#854F0B":"var(--red)"}}>
+                    {parsed.bodyBattery>=76?"能量充沛，今天适合高强度训练":parsed.bodyBattery>=51?"能量中等，适合中低强度运动":parsed.bodyBattery>=26?"能量偏低，建议以恢复为主":"能量极低，优先保证休息"}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExerciseTab() {
+  const dayIdx=(new Date().getDay()+6)%7;
+  const [sel,setSel]=useState(dayIdx);
+  const plan=EXERCISE_PLAN[sel];
+  return(
+    <div>
+      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:10}}>第一阶段目标：4周内从每周1次升级至5次</div>
+      <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
+        {EXERCISE_PLAN.map((p,i)=>(
+          <div key={i} onClick={()=>setSel(i)}
+            style={{padding:"7px 12px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,whiteSpace:"nowrap",background:sel===i?"var(--green)":i===dayIdx?"var(--green-light)":"var(--bg-secondary)",color:sel===i?"#fff":i===dayIdx?"var(--green-dark)":"var(--text-secondary)",border:sel===i?"none":`0.5px solid var(--border)`}}>
+            {p.day}{i===dayIdx?" ·今":""}
+          </div>
+        ))}
+      </div>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:500}}>{plan.type}</div>
+            <div style={{fontSize:13,color:"var(--text-secondary)",marginTop:4}}>{plan.day}</div>
+          </div>
+          <Tag>{plan.focus}</Tag>
+        </div>
+        {plan.items.map((item,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:i<plan.items.length-1?`0.5px solid var(--border)`:"none"}}>
+            <div style={{width:24,height:24,borderRadius:6,background:"var(--bg-secondary)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:500,color:"var(--text-secondary)",flexShrink:0}}>{i+1}</div>
+            <div style={{fontSize:14}}>{item}</div>
+          </div>
+        ))}
+      </Card>
+      <div style={{marginTop:12,background:"var(--amber-light)",borderRadius:8,padding:"12px 16px"}}>
+        <div style={{fontSize:13,fontWeight:500,color:"#633806",marginBottom:4}}>渐进原则</div>
+        <div style={{fontSize:12,color:"#854F0B",lineHeight:1.8}}>第1-2周：完成60%即可，适应为主<br/>第3-4周：逐步完成80%，增加强度<br/>第2个月起：全量执行，开始看到改变</div>
+      </div>
+    </div>
+  );
+}
+
+function NutritionTab() {
+  const [view,setView]=useState("meals");
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {[["meals","三餐方案"],["supps","保健品"]].map(([k,l])=>(
+          <div key={k} onClick={()=>setView(k)}
+            style={{padding:"7px 18px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,background:view===k?"var(--green)":"var(--bg-secondary)",color:view===k?"#fff":"var(--text-secondary)",border:view===k?"none":`0.5px solid var(--border)`}}>
+            {l}
+          </div>
+        ))}
+      </div>
+      {view==="meals"?(
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {[["早餐 07:00","breakfast","#FAC775","#633806"],["午餐 12:00","lunch","#9FE1CB","#085041"],["晚餐 18:30","dinner","#B5D4F4","#042C53"]].map(([title,key,bg,tc])=>(
+            <div key={key} style={{border:`0.5px solid var(--border)`,borderRadius:12,overflow:"hidden"}}>
+              <div style={{background:bg,padding:"10px 16px",fontSize:14,fontWeight:500,color:tc}}>{title}</div>
+              {NUTRITION[key].map((item,i)=>(
+                <div key={i} style={{padding:"10px 16px",borderBottom:i<NUTRITION[key].length-1?`0.5px solid var(--border)`:"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500}}>{item.name}</div>
+                    <div style={{fontSize:12,color:"var(--text-secondary)",marginTop:2}}>{item.detail}</div>
+                  </div>
+                  <Tag>{item.reason}</Tag>
+                </div>
+              ))}
+            </div>
+          ))}
+          <div style={{background:"var(--amber-light)",borderRadius:8,padding:"12px 16px"}}>
+            <div style={{fontSize:13,fontWeight:500,color:"#633806",marginBottom:6}}>饮食禁忌</div>
+            <div style={{fontSize:12,color:"#854F0B",lineHeight:1.9}}>
+              ❌ 高草酸食物：菠菜减量、花生、浓茶（肾结石）<br/>
+              ❌ 高脂肪：油炸食品、肥肉、奶油（脂肪肝）<br/>
+              ❌ 高糖：果汁、甜饮料（脂肪肝）<br/>
+              ❌ 饮酒：即使少量也会加重脂肪肝<br/>
+              ✅ 每天饮水 2.5L 以上，促进排石
+            </div>
+          </div>
+        </div>
+      ):(
+        <div>
+          <Card style={{padding:"4px 16px"}}>
+            {NUTRITION.supplements.map((s,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:i<NUTRITION.supplements.length-1?`0.5px solid var(--border)`:"none"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:500}}>{s.name}</div>
+                  <div style={{fontSize:12,color:"var(--text-secondary)",marginTop:2}}>{s.dose} · {s.timing}</div>
+                </div>
+                <Tag>{s.reason}</Tag>
+              </div>
+            ))}
+          </Card>
+          <div style={{marginTop:12,background:"var(--blue-light)",borderRadius:8,padding:"12px 16px"}}>
+            <div style={{fontSize:13,fontWeight:500,color:"var(--blue)",marginBottom:4}}>重要提示</div>
+            <div style={{fontSize:12,color:"var(--blue)",lineHeight:1.7}}>以上建议仅供参考，开始前请咨询医生。</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SleepTab() {
+  const [q,setQ]=useState({wake:false,dream:false,refresh:false,note:""});
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <Card>
+        <div style={{fontSize:14,fontWeight:500,marginBottom:8}}>当前睡眠分析</div>
+        <div style={{fontSize:13,color:"var(--text-secondary)",lineHeight:1.8,marginBottom:10}}>
+          10:30 入睡 → 03:00 醒（4.5h）→ 04:00 再入睡 → 06:00 起（2h）<br/>
+          总时长 <strong style={{color:"var(--text-primary)"}}>6.5小时</strong>，凌晨3点固定觉醒
+        </div>
+        <div style={{background:"var(--amber-light)",borderRadius:8,padding:"10px 12px",fontSize:12,color:"#854F0B",lineHeight:1.7}}>
+          可能原因：皮质醇节律异常（压力激素凌晨3点升高）、血糖轻微波动。目标：延长深度睡眠至凌晨4-5点。
+        </div>
+      </Card>
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>晚间优化流程</div>
+        {SLEEP_TIPS.map((t,i)=>(
+          <div key={i} style={{display:"flex",gap:12,padding:"10px 0",borderBottom:i<SLEEP_TIPS.length-1?`0.5px solid var(--border)`:"none"}}>
+            <div style={{minWidth:44,fontSize:13,fontWeight:500,color:"var(--text-secondary)"}}>{t.time}</div>
+            <div style={{fontSize:14,lineHeight:1.6}}>{t.action}</div>
+          </div>
+        ))}
+      </Card>
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10}}>今晨睡眠复盘</div>
+        {[["wake","凌晨是否觉醒"],["dream","多梦"],["refresh","醒来精神状态好"]].map(([k,l])=>(
+          <div key={k} onClick={()=>setQ(p=>({...p,[k]:!p[k]}))}
+            style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",cursor:"pointer"}}>
+            <div style={{width:20,height:20,borderRadius:5,border:`0.5px solid var(--border-md)`,background:q[k]?"var(--green)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              {q[k]&&<span style={{color:"#fff",fontSize:13}}>✓</span>}
+            </div>
+            <span style={{fontSize:13}}>{l}</span>
+          </div>
+        ))}
+        <textarea placeholder="今日睡眠备注（可选）" value={q.note} onChange={e=>setQ(p=>({...p,note:e.target.value}))}
+          style={{width:"100%",marginTop:10,padding:"8px 10px",borderRadius:8,border:`0.5px solid var(--border-md)`,background:"var(--bg-secondary)",color:"var(--text-primary)",fontSize:13,resize:"vertical",minHeight:60}}/>
+      </Card>
+    </div>
+  );
+}
+
+function AnalysisTab() {
+  const hist=load("history",[]);
+  const last7=hist.slice(-7);
+  const hasData=last7.length>0;
+
+  const Bar=({data,max,color,label})=>(
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:8}}>{label}</div>
+      <div style={{display:"flex",gap:4,alignItems:"flex-end",height:64}}>
+        {(hasData?data:Array(7).fill(0)).map((v,i)=>(
+          <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+            <div style={{fontSize:10,color:"var(--text-secondary)"}}>{v||""}</div>
+            <div style={{width:"100%",background:color,borderRadius:"4px 4px 0 0",height:Math.max((v/max)*52,2),transition:"height 0.3s"}}/>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:4,marginTop:4}}>
+        {(hasData?last7:["一","二","三","四","五","六","日"]).map((d,i)=>(
+          <div key={i} style={{flex:1,textAlign:"center",fontSize:10,color:"var(--text-secondary)"}}>{hasData?d.date?.slice(5):d}</div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return(
+    <div>
+      {!hasData&&(
+        <div style={{background:"var(--blue-light)",borderRadius:8,padding:"12px 16px",marginBottom:16}}>
+          <div style={{fontSize:13,color:"var(--blue)"}}>每日在「今日」标签记录数据后，图表将自动显示趋势。</div>
+        </div>
+      )}
+      <Card style={{marginBottom:12}}>
+        <Bar data={last7.map(d=>d.water||0)} max={10} color="var(--green)" label="饮水（杯）"/>
+        <Bar data={last7.map(d=>d.sleep||0)} max={9} color="#378ADD" label="睡眠（小时）"/>
+        <Bar data={last7.map(d=>parseFloat(d.weight)||0)} max={80} color="var(--amber)" label="体重（kg）"/>
+      </Card>
+      <Card>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:12}}>12个月里程碑</div>
+        {[
+          {m:"1-2月",goal:"运动提升至每周4次，建立饮食习惯"},
+          {m:"3个月",goal:"体重62-63kg，脂肪肝趋势改善"},
+          {m:"6个月",goal:"睡眠质量提升，肾结石无症状"},
+          {m:"12个月",goal:"全面改善，体能接近30岁水平"},
+        ].map((r,i)=>(
+          <div key={i} style={{display:"flex",gap:12,padding:"8px 0",borderBottom:i<3?`0.5px solid var(--border)`:"none",alignItems:"center"}}>
+            <div style={{minWidth:48,padding:"3px 0",borderRadius:6,background:"var(--green)",textAlign:"center",fontSize:11,fontWeight:500,color:"#fff",flexShrink:0}}>{r.m}</div>
+            <div style={{fontSize:13,lineHeight:1.6}}>{r.goal}</div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+function AITab() {
+  const [msgs,setMsgs]=useState([{role:"assistant",text:"你好，陈硕！我是你的AI健康顾问，已读取你的完整体检档案。可以问我关于运动、营养、睡眠的任何问题。"}]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const dk=todayKey();
+  const log=load("log_"+dk,{});
+  const garmin=load("garmin_latest",{});
+
+  const send=async()=>{
+    if(!input.trim()||loading)return;
+    const q=input.trim();setInput("");
+    setMsgs(m=>[...m,{role:"user",text:q}]);setLoading(true);
+    const ctx=`你是陈硕的专属健康管理AI顾问。健康档案：40岁男性，身高171cm，体重65kg，BMI 22.2。主要问题：脂肪肝趋势、右肾结石(3mm)、左肾结晶、颈椎轻度骨质增生、睡眠质量差（凌晨3点固定觉醒，总睡6.5小时）。运动现状：每周1次跑步20分钟。饮食：多盐多油多糖辛辣。家族史：糖尿病。目标：逆龄至30岁状态。今日：饮水${log.water||0}杯，体重${log.weight||"未记录"}kg，睡眠${log.sleep||6.5}小时，运动${log.exercise?"已完成":"未完成"}。Garmin：Body Battery ${garmin.bodyBattery||"未知"}，HRV ${garmin.hrv||"未知"}ms，静息心率${garmin.restingHR||"未知"}bpm。请用中文回答，语气亲切专业，回复控制在150字以内。`;
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:ctx,messages:[...msgs.filter((_,i)=>i>0).map(m=>({role:m.role,content:m.text})),{role:"user",content:q}]})});
+      const data=await res.json();
+      setMsgs(m=>[...m,{role:"assistant",text:data.content?.[0]?.text||"暂时无法回复，请稍后再试。"}]);
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",text:"网络异常，请稍后重试。"}]);}
+    setLoading(false);
+  };
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 200px)",minHeight:400}}>
+      <div style={{flex:1,overflowY:"auto",paddingBottom:12,display:"flex",flexDirection:"column",gap:10}}>
+        {msgs.map((m,i)=>(
+          <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+            <div style={{maxWidth:"82%",padding:"10px 14px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"14px 14px 14px 4px",background:m.role==="user"?"var(--green)":"var(--bg-secondary)",color:m.role==="user"?"#fff":"var(--text-primary)",fontSize:14,lineHeight:1.7}}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:"flex",gap:6,padding:"8px 14px",background:"var(--bg-secondary)",borderRadius:"14px 14px 14px 4px",width:"fit-content"}}>
+            {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:"var(--text-secondary)",animation:`bounce 1s ${i*0.2}s infinite alternate`}}/>)}
+          </div>
+        )}
+      </div>
+      <div style={{display:"flex",gap:8,paddingTop:12,borderTop:`0.5px solid var(--border)`}}>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
+          placeholder="问我任何健康问题..."
+          style={{flex:1,padding:"10px 14px",borderRadius:10,border:`0.5px solid var(--border-md)`,background:"var(--bg-secondary)",color:"var(--text-primary)",fontSize:14}}/>
+        <button onClick={send} disabled={loading||!input.trim()}
+          style={{padding:"10px 20px",borderRadius:10,border:"none",background:loading||!input.trim()?"var(--bg-secondary)":"var(--green)",color:loading||!input.trim()?"var(--text-secondary)":"#fff",fontSize:14,fontWeight:500}}>
+          发送
+        </button>
+      </div>
+      <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+        {["今天应该怎么运动？","今天吃什么有利于排石？","怎么改善凌晨3点醒？"].map(q=>(
+          <div key={q} onClick={()=>setInput(q)}
+            style={{fontSize:12,padding:"5px 10px",borderRadius:20,border:`0.5px solid var(--border-md)`,cursor:"pointer",color:"var(--text-secondary)",background:"var(--bg-secondary)"}}>
+            {q}
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes bounce{from{opacity:.3;transform:translateY(0)}to{opacity:1;transform:translateY(-4px)}}`}</style>
+    </div>
+  );
+}
+
+function App() {
+  const [tab,setTab]=useState(0);
+  return(
+    <div style={{maxWidth:680,margin:"0 auto",padding:"16px 16px 80px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:500}}>陈硕的健康管理</div>
+          <div style={{fontSize:13,color:"var(--text-secondary)",marginTop:3}}>目标：逆龄至30岁 · 基准 2025-12-30</div>
+        </div>
+        <div style={{fontSize:12,color:"var(--text-secondary)"}}>{new Date().toLocaleDateString("zh-CN",{month:"long",day:"numeric"})}</div>
+      </div>
+
+      {/* 底部导航 */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"var(--bg-primary)",borderTop:`0.5px solid var(--border)`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
+        {TABS.map((t,i)=>(
+          <div key={t} onClick={()=>setTab(i)}
+            style={{flex:1,padding:"10px 4px 8px",textAlign:"center",cursor:"pointer",fontSize:11,color:tab===i?"var(--green)":"var(--text-secondary)",fontWeight:tab===i?500:400,borderTop:tab===i?"2px solid var(--green)":"2px solid transparent",transition:"all 0.15s"}}>
+            {["📋","⌚","🏃","🥗","😴","📊","🤖"][i]}
+            <div style={{marginTop:2}}>{t}</div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        {tab===0&&<TodayTab/>}
+        {tab===1&&<GarminTab/>}
+        {tab===2&&<ExerciseTab/>}
+        {tab===3&&<NutritionTab/>}
+        {tab===4&&<SleepTab/>}
+        {tab===5&&<AnalysisTab/>}
+        {tab===6&&<AITab/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
